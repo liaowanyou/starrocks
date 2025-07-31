@@ -52,6 +52,8 @@ import com.starrocks.sql.optimizer.rewrite.ScalarOperatorRewriter;
 import com.starrocks.sql.optimizer.transformer.SqlToScalarOperatorTranslator;
 import com.starrocks.sql.plan.ScalarOperatorToExpr;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -511,6 +513,10 @@ public class ListPartitionPruner implements PartitionPruner {
 
         for (Map.Entry<LiteralExpr, Set<Long>> entry : partitionValueMap.entrySet()) {
             LiteralExpr key = entry.getKey();
+            if (castOperator.getType().isNumericType() && !NumberUtils.isNumber(key.getStringValue())) {
+                //partition value (p='1','2','a'), select * from tb where p=1, cast(p as decimal),An error occurs when the value is 'a'.
+                continue;
+            }
             LiteralExpr literalExpr = castLiteralExpr(key, castOperator.getType());
             Set<Long> partitions = newPartitionValueMap.computeIfAbsent(literalExpr, k -> Sets.newHashSet());
             partitions.addAll(entry.getValue());
